@@ -224,8 +224,9 @@ async def list_provider_models(provider_name: str) -> dict[str, Any]:
             api_key = match.group(1)
 
     # Register provider with API key
+    from xcopilot.core.model_providers import register_all_providers
     if api_key:
-        registry.register(provider_name, {"api_key": api_key})
+        register_all_providers({provider_name: {"api_key": api_key}})
 
     # List models
     available = await registry.list_all_models()
