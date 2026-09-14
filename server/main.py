@@ -617,8 +617,7 @@ async def jsonrpc_websocket(websocket: WebSocket) -> None:
                 provider_name = str(params[0] if params else "openai")
                 try:
                     from xcopilot.core.model_providers import PROVIDER_API_MODES
-                    from xcopilot.core.registry import ModelRegistry
-                    from xcopilot.core.models import ModelCapability
+                    from xcopilot.core.models import ModelCapability, registry
 
                     mode = PROVIDER_API_MODES.get(provider_name)
                     if not mode:
@@ -632,7 +631,6 @@ async def jsonrpc_websocket(websocket: WebSocket) -> None:
                         match = re.search(r"^OPENAI_API_KEY=(.+)$", content, re.MULTILINE)
                         if match:
                             api_key = match.group(1)
-                    registry = ModelRegistry()
                     if api_key:
                         registry.register(provider_name, {"api_key": api_key})
                     available = await registry.list_all_models()

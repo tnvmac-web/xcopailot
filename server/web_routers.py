@@ -206,7 +206,7 @@ async def update_settings(
 async def list_provider_models(provider_name: str) -> dict[str, Any]:
     """List available models for a provider. Queries the provider API."""
     from xcopilot.core.model_providers import PROVIDER_API_MODES
-    from xcopilot.core.registry import ModelRegistry
+    from xcopilot.core.models import ModelCapability, registry
 
     mode = PROVIDER_API_MODES.get(provider_name)
     if not mode:
@@ -223,7 +223,6 @@ async def list_provider_models(provider_name: str) -> dict[str, Any]:
             api_key = match.group(1)
 
     # Register provider with API key
-    registry = ModelRegistry()
     if api_key:
         registry.register(provider_name, {"api_key": api_key})
 
