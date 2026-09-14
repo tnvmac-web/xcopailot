@@ -530,6 +530,96 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.send_json({"type": "error", "message": "Invalid JSON payload"})
 
 
+# ── JSON-RPC WebSocket (desktop + web) ─────────────────
+
+@app.websocket("/ws")
+async def jsonrpc_websocket(websocket: WebSocket) -> None:
+    """JSON-RPC WebSocket endpoint for desktop and web surfaces.
+
+    Mirrors Hermes @hermes/shared JsonRpcClient pattern.
+    Desktop and web both connect here for real-time communication.
+    """
+    await websocket.accept()
+
+    try:
+        auth_packet = await websocket.receive_json()
+        token = str(auth_packet.get("token", "")) if isinstance(auth_packet, dict) else ""
+        user_id = _validate_token(token) if token else "anonymous"
+    except (WebSocketDisconnect, json.JSONDecodeError, ValueError):
+        await websocket.send_json({"jsonrpc": "2.0", "error": {"code": -32600, "message": "Authentication required"}})
+        await websocket.close()
+        return
+
+    await websocket.send_json({"jsonrpc": "2.0", "method": "connected", "params": {"user": user_id}})
+
+    delegator = _delegator
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                request = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}})
+                continue
+
+            rpc_id = request.get("id")
+            method = request.get("method")
+            params = request.get("params", [])
+
+            if method == "chat.send":
+                session_id = str(params[0] if params else "default")
+                message = str(params[1] if len(params) > 1 else "")
+                session = _get_or_create_session(session_id, user_id)
+                user_settings = _settings_for(user_id)
+                model = user_settings.get("default_model", "gpt-4o-mini")
+                try:
+                    response = await conversation_loop.process_prompt(
+                        session.id,
+                        [ChatMessage(role="user", content=message)],
+                        model,
+                        temperature=float(user_settings.get("temperature", 0.7)),
+                        max_tokens=int(user_settings.get("max_tokens", 4096)),
+                        context_mode=str(user_settings.get("context_mode", "standard")),
+                        stream=True,
+                    )
+                    if hasattr(response, "__aiter__"):
+                        async for chunk in response:
+                            await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": chunk.content})
+                        await websocket.send_json({"jsonrpc": "2.0", "method": "chat.complete", "params": {"session_id": session.id}})
+                    else:
+                        await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": response.content})
+                except RuntimeError as exc:
+                    await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "error": {"code": -32000, "message": str(exc)}})
+
+            elif method == "session.list":
+                sessions = [s.id for s in SESSIONS.values() if s.user_id == user_id]
+                await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": sessions})
+
+            elif method == "session.create":
+                session_id = secrets.token_urlsafe(12)
+                session = _get_or_create_session(session_id, user_id)
+                await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {"session_id": session.id}})
+
+            elif method == "tasks.list":
+                tasks = delegator.list_tasks()
+                await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": [{"task_id": t.task_id, "goal": t.goal, "status": t.status.value} for t in tasks]})
+
+            elif method == "tasks.delegate":
+                goal = str(params[0] if params else "")
+                task = delegator.delegate(goal)
+                await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {"task_id": task.task_id, "status": task.status.value}})
+
+            elif method == "server.status":
+                await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {"status": "running", "version": "0.1.1"}})
+
+            else:
+                await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "error": {"code": -32601, "message": f"Method not found: {method}"}})
+
+    except WebSocketDisconnect:
+        return
+
+
 # ── Delegation API ────────────────────────────────────────
 
 _delegator = TaskDelegator()

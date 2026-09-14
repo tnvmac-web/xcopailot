@@ -1,0 +1,13 @@
+{
+  "name": "@xcopilot/shared",
+  "private": true,
+  "version": "0.1.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
