@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Copilot — Web Dashboard</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>🤖 X-Copilot</h1>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm btn-secondary" id="btn-terminal">💻 Terminal</button>
+      <button class="btn btn-sm btn-secondary" id="btn-memory">🧠 Memory</button>
+      <button class="btn btn-sm btn-secondary" id="btn-tasks">📋 Tasks</button>
+      <button class="btn btn-sm btn-secondary" id="btn-settings">⚙ Settings</button>
+      <button class="btn btn-sm btn-primary" id="btn-new-chat">✕ New</button>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span><span class="status-dot" id="server-dot"></span> Server: <span id="server-status-text">Checking...</span></span>
+    <span>v<span id="app-version">0.1.1</span></span>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">Sessions</div>
+      <div class="sidebar-list" id="sidebar-sessions"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Chat View -->
+      <div class="chat-view view" id="view-chat" style="display:flex;">
+        <div class="messages" id="chat-messages"></div>
+        <div class="input-area">
+          <textarea id="chat-input" placeholder="Type a message..." rows="1"></textarea>
+          <button class="send-btn" id="btn-send" disabled>Send</button>
+        </div>
+      </div>
+
+      <!-- Tasks View -->
+      <div class="chat-view view" id="view-tasks" style="display:none;">
+        <div class="tasks-list" id="tasks-list"></div>
+      </div>
+
+      <!-- Settings View -->
+      <div class="chat-view view" id="view-settings" style="display:none;">
+        <div class="settings-panel">
+          <h3>Settings</h3>
+          <div class="settings-field">
+            <label>Model</label>
+            <input id="setting-model" value="gpt-4o-mini">
+          </div>
+          <div class="settings-field">
+            <label>Permission Mode</label>
+            <select id="setting-permission">
+              <option value="standard">Standard</option>
+              <option value="plan">Plan</option>
+              <option value="bypass">Bypass</option>
+              <option value="auto-ask">Auto Ask</option>
+              <option value="dont-ask">Don't Ask</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label>Provider</label>
+            <select id="setting-provider">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="ollama">Ollama</option>
+              <option value="lmstudio">LM Studio</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="nvidia">NVIDIA</option>
+            </select>
+          </div>
+          <div class="settings-actions">
+            <button class="btn btn-primary" id="btn-settings-save">Save</button>
+            <button class="btn btn-secondary" id="btn-settings-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal View -->
+      <div class="chat-view view" id="view-terminal" style="display:none;flex-direction:column;">
+      </div>
+
+      <!-- Memory View -->
+      <div class="chat-view view" id="view-memory" style="display:none;overflow-y:auto;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
