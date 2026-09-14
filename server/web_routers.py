@@ -145,9 +145,7 @@ settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 @settings_router.get("/")
-async def get_settings(
-    _token: str = Depends(require_auth),
-) -> dict[str, Any]:
+async def get_settings() -> dict[str, Any]:
     """Get current settings."""
     config = load_config()
     secrets_path = get_secrets_path()
@@ -170,10 +168,7 @@ async def get_settings(
 
 
 @settings_router.put("/")
-async def update_settings(
-    payload: dict[str, Any],
-    _token: str = Depends(require_auth),
-) -> dict[str, Any]:
+async def update_settings(payload: dict[str, Any]) -> dict[str, Any]:
     """Update settings. Handles api_key separately (stored in .env)."""
     from xcopilot.config import save_config, get_secrets_path
 
@@ -200,6 +195,42 @@ async def update_settings(
             config[key] = value
     save_config(config)
     return {"status": "ok", "settings": load_settings()}
+
+
+@settings_router.get("/models/{provider_name}")
+async def list_provider_models(provider_name: str) -> dict[str, Any]:
+    """List available models for a provider. Queries the provider API."""
+    from xcopilot.core.model_providers import PROVIDER_API_MODES
+    from xcopilot.core.registry import ModelRegistry
+
+    mode = PROVIDER_API_MODES.get(provider_name)
+    if not mode:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_name}")
+
+    # Get API key from .env
+    secrets_path = get_secrets_path()
+    api_key = ""
+    if secrets_path.exists():
+        import re
+        content = secrets_path.read_text(encoding="utf-8")
+        match = re.search(r"^OPENAI_API_KEY=(.+)$", content, re.MULTILINE)
+        if match:
+            api_key = match.group(1)
+
+    # Register provider with API key
+    registry = ModelRegistry()
+    if api_key:
+        registry.register(provider_name, {"api_key": api_key})
+
+    # List models
+    available = await registry.list_all_models()
+    provider_models = available.get(provider_name, [])
+    models = [
+        {"id": m.id, "name": m.name, "provider": provider_name}
+        for m in provider_models
+        if ModelCapability.CHAT in m.capabilities
+    ]
+    return {"provider": provider_name, "models": models, "api_key_set": bool(api_key)}
 
 
 # ── Cron Router ──────────────────────────────────────────

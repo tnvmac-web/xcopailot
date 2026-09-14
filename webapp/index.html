@@ -76,15 +76,12 @@
             <input id="setting-api-key" type="password" placeholder="Enter API key...">
           </div>
           <div class="settings-field">
-            <label>Permission Mode</label>
-            <select id="setting-permission">
-              <option value="standard">Standard</option>
-              <option value="plan">Plan</option>
-              <option value="bypass">Bypass</option>
-              <option value="auto-ask">Auto Ask</option>
-              <option value="dont-ask">Don't Ask</option>
+            <label>Model</label>
+            <select id="setting-model">
+              <option value="gpt-4o-mini">gpt-4o-mini</option>
             </select>
           </div>
+          <div id="models-status" class="settings-status"></div>
           <div class="settings-actions">
             <button class="btn btn-primary" id="btn-settings-save">Save</button>
             <button class="btn btn-secondary" id="btn-settings-cancel">Cancel</button>

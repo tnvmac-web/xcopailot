@@ -613,6 +613,39 @@ async def jsonrpc_websocket(websocket: WebSocket) -> None:
             elif method == "server.status":
                 await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {"status": "running", "version": "0.1.1"}})
 
+            elif method == "settings.models":
+                provider_name = str(params[0] if params else "openai")
+                try:
+                    from xcopilot.core.model_providers import PROVIDER_API_MODES
+                    from xcopilot.core.registry import ModelRegistry
+                    from xcopilot.core.models import ModelCapability
+
+                    mode = PROVIDER_API_MODES.get(provider_name)
+                    if not mode:
+                        await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "error": {"code": -32000, "message": f"Unknown provider: {provider_name}"}})
+                        continue
+                    secrets_path = get_secrets_path()
+                    api_key = ""
+                    if secrets_path.exists():
+                        import re
+                        content = secrets_path.read_text(encoding="utf-8")
+                        match = re.search(r"^OPENAI_API_KEY=(.+)$", content, re.MULTILINE)
+                        if match:
+                            api_key = match.group(1)
+                    registry = ModelRegistry()
+                    if api_key:
+                        registry.register(provider_name, {"api_key": api_key})
+                    available = await registry.list_all_models()
+                    provider_models = available.get(provider_name, [])
+                    models = [
+                        {"id": m.id, "name": m.name}
+                        for m in provider_models
+                        if ModelCapability.CHAT in m.capabilities
+                    ]
+                    await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {"models": models}})
+                except Exception as exc:
+                    await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "error": {"code": -32000, "message": str(exc)}})
+
             else:
                 await websocket.send_json({"jsonrpc": "2.0", "id": rpc_id, "error": {"code": -32601, "message": f"Method not found: {method}"}})
 

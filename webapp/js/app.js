@@ -200,18 +200,54 @@ async function loadSettings() {
   try {
     state.settings = await api.getSettings();
     document.getElementById('setting-model').value = state.settings.model || 'gpt-4o-mini';
-    document.getElementById('setting-permission').value = state.settings.permission_mode || 'standard';
     document.getElementById('setting-provider').value = state.settings.provider || 'openai';
     document.getElementById('setting-api-key').value = state.settings.api_key || '';
+    if (state.settings.models && state.settings.models.length > 0) {
+      populateModelDropdown(state.settings.models);
+    } else {
+      fetchModels();
+    }
   } catch {
-    // Use defaults
+    fetchModels();
   }
+}
+
+async function fetchModels() {
+  const provider = document.getElementById('setting-provider').value;
+  const apiKey = document.getElementById('setting-api-key').value;
+  try {
+    const resp = await fetch(`/api/settings/models/${provider}`, { headers: { 'Content-Type': 'application/json' } });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.models && data.models.length > 0) {
+      populateModelDropdown(data.models);
+      state.settings = { ...state.settings, models: data.models };
+    }
+    const statusEl = document.getElementById('models-status');
+    if (statusEl) {
+      statusEl.textContent = data.api_key_set ? `${data.models.length} models available` : 'No API key set';
+      statusEl.className = 'settings-status info';
+    }
+  } catch {
+    // Provider unavailable
+  }
+}
+
+function populateModelDropdown(models) {
+  const select = document.getElementById('setting-model');
+  if (!select) return;
+  select.innerHTML = '';
+  models.forEach((m) => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name || m.id;
+    select.appendChild(opt);
+  });
 }
 
 async function saveSettings() {
   const settings = {
     model: document.getElementById('setting-model').value,
-    permission_mode: document.getElementById('setting-permission').value,
     provider: document.getElementById('setting-provider').value,
     api_key: document.getElementById('setting-api-key').value,
   };
@@ -223,6 +259,8 @@ async function saveSettings() {
       statusEl.textContent = 'Settings saved!';
       statusEl.className = 'settings-status success';
     }
+    // Fetch models for the selected provider
+    await fetchModels();
   } catch (err) {
     const statusEl = document.getElementById('settings-status');
     if (statusEl) {

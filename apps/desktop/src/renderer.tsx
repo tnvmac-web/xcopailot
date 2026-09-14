@@ -131,7 +131,7 @@ export default function App() {
   const [serverStatus, setServerStatus] = useState<"running" | "stopped" | "error">("checking");
   const [streaming, setStreaming] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({ model: "gpt-4o-mini", provider: "openai", api_key: "", permission_mode: "standard" });
+  const [settings, setSettings] = useState({ model: "gpt-4o-mini", provider: "openai", api_key: "", permission_mode: "standard", models: [] as string[] });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Connect to backend
@@ -259,6 +259,14 @@ export default function App() {
   const handleSaveSettings = async () => {
     try {
       await apiCall("settings.update", [settings]);
+      // Fetch models for the selected provider
+      try {
+        const models = await apiCall<{ models: Array<{ id: string; name: string }> }>("settings.models", [settings.provider]);
+        const modelIds = models.models.map((m: { id: string; name: string }) => m.id);
+        setSettings(prev => ({ ...prev, models: modelIds }));
+      } catch {
+        // Ignore model fetch error
+      }
       setShowSettings(false);
     } catch {
       // Ignore
@@ -292,7 +300,11 @@ export default function App() {
           <h3>Settings</h3>
           <div className="settings-field">
             <label>Model</label>
-            <input value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
+            <select value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})}>
+              {(settings.models as string[]).map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
           </div>
           <div className="settings-field">
             <label>Provider</label>
