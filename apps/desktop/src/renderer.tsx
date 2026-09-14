@@ -33,7 +33,7 @@ interface Task {
 
 // ── API Client ─────────────────────────────────────
 
-const client = new JsonRpcClient(`ws://${window.location.host}/api/ws`);
+const client = new JsonRpcClient(`ws://${window.location.host}/ws`);
 
 async function apiCall<T>(method: string, params?: unknown[]): Promise<T> {
   return client.request<T>(method, params);
