@@ -145,7 +145,9 @@ settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 @settings_router.get("/")
-async def get_settings() -> dict[str, Any]:
+async def get_settings(
+    _token: str = Depends(require_auth),
+) -> dict[str, Any]:
     """Get current settings."""
     config = load_config()
     secrets_path = get_secrets_path()
@@ -168,7 +170,10 @@ async def get_settings() -> dict[str, Any]:
 
 
 @settings_router.put("/")
-async def update_settings(payload: dict[str, Any]) -> dict[str, Any]:
+async def update_settings(
+    payload: dict[str, Any],
+    _token: str = Depends(require_auth),
+) -> dict[str, Any]:
     """Update settings. Handles api_key separately (stored in .env)."""
     from xcopilot.config import save_config, get_secrets_path
 
