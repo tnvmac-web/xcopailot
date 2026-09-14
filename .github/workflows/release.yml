@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,cli]"
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ -v --tb=short
+
+      - name: Verify CLI
+        run: |
+          xcopilot --version
+          xcopilot --help
+
+      - name: Verify server
+        run: |
+          python -c "from server.main import app; print('Server import OK')"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install desktop dependencies
+        run: cd desktop && npm install
+
+      - name: Build desktop app
+        run: cd desktop && npm run build
+
+      - name: Upload desktop installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcopilot-desktop-installer
+          path: desktop/dist/*.exe
+
+      - name: Upload unpacked app
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcopilot-desktop-unpacked
+          path: desktop/dist/win-unpacked/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            desktop/dist/*.exe
+            desktop/dist/win-unpacked/**/*
+          tag_name: ${{ github.ref_name }}
+          name: X-Copilot ${{ github.ref_name }}
+          body: |
+            ## X-Copilot ${{ github.ref_name }}
+
+            ### Desktop Installer
+            - `X-Copilot Setup *.exe` — NSIS installer
+
+            ### Installation
+            1. Run the installer
+            2. Launch X-Copilot from Start Menu
+            3. Server starts automatically on port 8001
+
+            ### Manual Server Start
+            ```bash
+            pip install -e ".[dev,cli]"
+            xcopilot desktop start
+            ```
+
+            ### Web Dashboard
+            Open http://127.0.0.1:8001/ in your browser.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,cli]"
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ -v --tb=short
+
+  lint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,cli]"
+
+      - name: Lint Python
+        run: |
+          python -m py_compile src/xcopilot/cli/main.py
+          python -m py_compile server/main.py
+          python -m py_compile src/xcopilot/core/delegation.py
+          python -m py_compile src/xcopilot/tools/delegation.py
+
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install and verify
+        run: |
+          pip install -e ".[dev,cli]"
+          xcopilot --version
+          xcopilot --help
+          python -c "from server.main import app; print('Server import OK')"
