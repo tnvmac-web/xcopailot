@@ -238,12 +238,48 @@ async def providers() -> dict[str, str]:
 async def get_settings(user_id: str = Depends(require_auth)) -> dict[str, Any]:
     settings = _settings_for(user_id).copy()
     settings["configured_providers"] = _configured_provider_names()
+    # Add model/provider/api_key from config.yaml
+    from xcopilot.config import load_config
+    config = load_config()
+    settings["model"] = config.get("model", "gpt-4o-mini")
+    settings["provider"] = config.get("provider", "openai")
+    # Read API key from .env
+    from xcopilot.config import get_secrets_path
+    secrets_path = get_secrets_path()
+    api_key = ""
+    if secrets_path.exists():
+        import re
+        content = secrets_path.read_text(encoding="utf-8")
+        match = re.search(r"^OPENAI_API_KEY=(.+)$", content, re.MULTILINE)
+        if match:
+            api_key = match.group(1)
+    settings["api_key"] = api_key
     return settings
 
 
 @app.put("/api/settings")
 async def update_settings(payload: dict[str, Any], user_id: str = Depends(require_auth)) -> dict[str, Any]:
     settings = _settings_for(user_id)
+    # Handle model/provider/api_key updates
+    from xcopilot.config import load_config, save_config, get_secrets_path
+    config = load_config()
+    if "model" in payload:
+        config["model"] = str(payload["model"])
+    if "provider" in payload:
+        config["provider"] = str(payload["provider"])
+    if "api_key" in payload:
+        api_key = str(payload["api_key"])
+        secrets_path = get_secrets_path()
+        secrets_path.parent.mkdir(parents=True, exist_ok=True)
+        existing = ""
+        if secrets_path.exists():
+            existing = secrets_path.read_text(encoding="utf-8")
+        lines = existing.splitlines()
+        lines = [l for l in lines if not l.startswith("OPENAI_API_KEY=")]
+        if api_key:
+            lines.append(f"OPENAI_API_KEY={api_key}")
+        secrets_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    save_config(config)
     api_keys = payload.get("provider_api_keys")
     if isinstance(api_keys, dict):
         provider_configs: dict[str, dict[str, str]] = {}
