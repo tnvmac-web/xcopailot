@@ -213,6 +213,7 @@ async def list_provider_models(provider_name: str) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_name}")
 
     # Get API key from .env
+    from xcopilot.config import get_secrets_path
     secrets_path = get_secrets_path()
     api_key = ""
     if secrets_path.exists():
