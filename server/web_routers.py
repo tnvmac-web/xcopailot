@@ -115,6 +115,30 @@ async def get_session(
     }
 
 
+# ── Settings helpers ───────────────────────────
+
+def load_settings() -> dict[str, Any]:
+    """Load current settings for API responses."""
+    config = load_config()
+    secrets_path = get_secrets_path()
+    api_key = ""
+    if secrets_path.exists():
+        import re
+        content = secrets_path.read_text(encoding="utf-8")
+        match = re.search(r"^OPENAI_API_KEY=(.+)$", content, re.MULTILINE)
+        if match:
+            api_key = match.group(1)
+    return {
+        "profile": config.get("profile", "default"),
+        "permission_mode": config.get("permission_mode", "standard"),
+        "model": config.get("model", "gpt-4o-mini"),
+        "provider": config.get("provider", "openai"),
+        "api_key": api_key,
+        "server": config.get("server", {}),
+        "ui": config.get("ui", {}),
+    }
+
+
 # ── Settings Router ──────────────────────────────────────
 
 settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -126,11 +150,20 @@ async def get_settings(
 ) -> dict[str, Any]:
     """Get current settings."""
     config = load_config()
+    secrets_path = get_secrets_path()
+    api_key = ""
+    if secrets_path.exists():
+        import re
+        content = secrets_path.read_text(encoding="utf-8")
+        match = re.search(r"^OPENAI_API_KEY=(.+)$", content, re.MULTILINE)
+        if match:
+            api_key = match.group(1)
     return {
         "profile": config.get("profile", "default"),
         "permission_mode": config.get("permission_mode", "standard"),
         "model": config.get("model", "gpt-4o-mini"),
         "provider": config.get("provider", "openai"),
+        "api_key": api_key,
         "server": config.get("server", {}),
         "ui": config.get("ui", {}),
     }
@@ -141,15 +174,32 @@ async def update_settings(
     payload: dict[str, Any],
     _token: str = Depends(require_auth),
 ) -> dict[str, Any]:
-    """Update settings."""
-    from xcopilot.config import save_config
+    """Update settings. Handles api_key separately (stored in .env)."""
+    from xcopilot.config import save_config, get_secrets_path
 
     config = load_config()
+
+    # Handle api_key separately — store in .env, not config.yaml
+    api_key = payload.pop("api_key", None)
+    if api_key is not None:
+        secrets_path = get_secrets_path()
+        secrets_path.parent.mkdir(parents=True, exist_ok=True)
+        # Read existing .env, update or append API key
+        existing = ""
+        if secrets_path.exists():
+            existing = secrets_path.read_text(encoding="utf-8")
+        lines = existing.splitlines()
+        # Remove existing OPENAI_API_KEY line
+        lines = [l for l in lines if not l.startswith("OPENAI_API_KEY=")]
+        if api_key:
+            lines.append(f"OPENAI_API_KEY={api_key}")
+        secrets_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
     for key, value in payload.items():
         if key in config:
             config[key] = value
     save_config(config)
-    return {"status": "ok", "settings": config}
+    return {"status": "ok", "settings": load_settings()}
 
 
 # ── Cron Router ──────────────────────────────────────────

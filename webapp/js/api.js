@@ -15,32 +15,7 @@ export const api = {
   // ── Health ──────────────────────────────────
   health: () => fetch(`${API_BASE}/health`).then(r => r.json()),
 
-  // ── Chat ────────────────────────────────────
-  chat: (messages, model = 'gpt-4o-mini', sessionId = null) =>
-    fetch(`${API_BASE}/api/chat`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ messages, model, session_id: sessionId }),
-    }).then(r => r.json()),
-
-  // ── Sessions ────────────────────────────────
-  listSessions: (profile = 'default') =>
-    fetch(`${API_BASE}/api/sessions?profile=${profile}`, { headers }).then(r => r.json()),
-
-  getSession: (sessionId) =>
-    fetch(`${API_BASE}/api/sessions/${sessionId}`, { headers }).then(r => r.json()),
-
-  createSession: (title = 'New Session') =>
-    fetch(`${API_BASE}/api/sessions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ title }),
-    }).then(r => r.json()),
-
-  deleteSession: (sessionId) =>
-    fetch(`${API_BASE}/api/sessions/${sessionId}`, { method: 'DELETE', headers }),
-
-  // ── Settings ────────────────────────────────
+  // ── Settings ──────────────────────────────
   getSettings: () =>
     fetch(`${API_BASE}/api/settings`, { headers }).then(r => r.json()),
 
@@ -51,55 +26,68 @@ export const api = {
       body: JSON.stringify(settings),
     }).then(r => r.json()),
 
-  // ── Delegation ──────────────────────────────
-  delegate: (goal, options = {}) =>
-    fetch(`${API_BASE}/api/delegation/delegate`, {
+  // ── Chat ──────────────────────────────────
+  chat: (messages, model = 'gpt-4o-mini', sessionId = null) =>
+    fetch(`${API_BASE}/api/chat`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ goal, ...options }),
+      body: JSON.stringify({ messages, model, session_id: sessionId }),
     }).then(r => r.json()),
 
-  delegateBatch: (goals, options = {}) =>
-    fetch(`${API_BASE}/api/delegation/delegate/batch`, {
+  // ── Sessions ──────────────────────────────
+  listSessions: (profile = 'default') =>
+    fetch(`${API_BASE}/api/sessions?profile=${profile}`, { headers }).then(r => r.json()),
+
+  getSession: (sessionId) =>
+    fetch(`${API_BASE}/api/sessions/${sessionId}`, { headers }).then(r => r.json()),
+
+  createSession: (title = null) =>
+    fetch(`${API_BASE}/api/sessions`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ goals, ...options }),
+      body: JSON.stringify({ title }),
     }).then(r => r.json()),
 
+  deleteSession: (sessionId) =>
+    fetch(`${API_BASE}/api/sessions/${sessionId}`, { method: 'DELETE', headers }).then(r => r.json()),
+
+  // ── Messages ──────────────────────────────
+  fetchMessages: (sessionId) =>
+    fetch(`${API_BASE}/api/sessions/${sessionId}/messages`, { headers }).then(r => r.json()),
+
+  // ── Delegation ────────────────────────────
   listTasks: (status = null) => {
     const url = status ? `${API_BASE}/api/delegation/tasks?status=${status}` : `${API_BASE}/api/delegation/tasks`;
     return fetch(url, { headers }).then(r => r.json());
   },
 
-  getTask: (taskId) =>
-    fetch(`${API_BASE}/api/delegation/status/${taskId}`, { headers }).then(r => r.json()),
+  delegateTask: (goal, context = '', role = 'leaf', model = null) =>
+    fetch(`${API_BASE}/api/delegation/delegate`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ goal, context, role, model }),
+    }).then(r => r.json()),
 
   cancelTask: (taskId) =>
-    fetch(`${API_BASE}/api/delegation/tasks/${taskId}`, { method: 'DELETE', headers }).then(r => r.json()),
+    fetch(`${API_BASE}/api/delegation/tasks/${taskId}/cancel`, { method: 'POST', headers }).then(r => r.json()),
+
+  getTask: (taskId) =>
+    fetch(`${API_BASE}/api/delegation/status/${taskId}`, { headers }).then(r => r.json()),
 
   delegationSummary: () =>
     fetch(`${API_BASE}/api/delegation/summary`, { headers }).then(r => r.json()),
 
-  delegationHistory: (limit = 50) =>
+  delegationHistory: (limit = 20) =>
     fetch(`${API_BASE}/api/delegation/history?limit=${limit}`, { headers }).then(r => r.json()),
 
-  // ── Tools ───────────────────────────────────
-  listTools: (toolset = null) => {
-    const url = toolset ? `${API_BASE}/api/tools?toolset=${toolset}` : `${API_BASE}/api/tools`;
-    return fetch(url, { headers }).then(r => r.json());
-  },
+  // ── Memory ────────────────────────────────
+  getMemory: () =>
+    fetch(`${API_BASE}/api/memory`, { headers }).then(r => r.json()),
 
-  getToolSchemas: () =>
-    fetch(`${API_BASE}/api/tools/schemas`, { headers }).then(r => r.json()),
+  clearMemory: (scope = 'all') =>
+    fetch(`${API_BASE}/api/memory?scope=${scope}`, { method: 'DELETE', headers }).then(r => r.json()),
 
-  // ── Memory ──────────────────────────────────
-  getMemory: (type = 'all', search = '') =>
-    fetch(`${API_BASE}/api/memory?type=${type}&search=${search}`, { headers }).then(r => r.json()),
-
-  clearMemory: () =>
-    fetch(`${API_BASE}/api/memory`, { method: 'DELETE', headers }),
-
-  // ── Cron ────────────────────────────────────
+  // ── Cron ──────────────────────────────────
   listCronJobs: (profile = 'default') =>
     fetch(`${API_BASE}/api/cron?profile=${profile}`, { headers }).then(r => r.json()),
 
@@ -116,7 +104,7 @@ export const api = {
   getCronJob: (jobId) =>
     fetch(`${API_BASE}/api/cron/${jobId}`, { headers }).then(r => r.json()),
 
-  // ── Gateway ─────────────────────────────────
+  // ── Gateway ──────────────────────────────
   gatewayStatus: () =>
     fetch(`${API_BASE}/api/gateway/status`, { headers }).then(r => r.json()),
 
@@ -125,7 +113,7 @@ export const api = {
     return fetch(url, { headers }).then(r => r.json());
   },
 
-  // ── Chat Stream ─────────────────────────────
+  // ── Chat Stream ──────────────────────────
   chatStream: async function* (messages, model = 'gpt-4o-mini', sessionId = null) {
     const resp = await fetch(`${API_BASE}/api/chat/stream`, {
       method: 'POST',

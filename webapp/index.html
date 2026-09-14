@@ -61,16 +61,6 @@
             <input id="setting-model" value="gpt-4o-mini">
           </div>
           <div class="settings-field">
-            <label>Permission Mode</label>
-            <select id="setting-permission">
-              <option value="standard">Standard</option>
-              <option value="plan">Plan</option>
-              <option value="bypass">Bypass</option>
-              <option value="auto-ask">Auto Ask</option>
-              <option value="dont-ask">Don't Ask</option>
-            </select>
-          </div>
-          <div class="settings-field">
             <label>Provider</label>
             <select id="setting-provider">
               <option value="openai">OpenAI</option>
@@ -81,10 +71,25 @@
               <option value="nvidia">NVIDIA</option>
             </select>
           </div>
+          <div class="settings-field">
+            <label>API Key</label>
+            <input id="setting-api-key" type="password" placeholder="Enter API key...">
+          </div>
+          <div class="settings-field">
+            <label>Permission Mode</label>
+            <select id="setting-permission">
+              <option value="standard">Standard</option>
+              <option value="plan">Plan</option>
+              <option value="bypass">Bypass</option>
+              <option value="auto-ask">Auto Ask</option>
+              <option value="dont-ask">Don't Ask</option>
+            </select>
+          </div>
           <div class="settings-actions">
             <button class="btn btn-primary" id="btn-settings-save">Save</button>
             <button class="btn btn-secondary" id="btn-settings-cancel">Cancel</button>
           </div>
+          <div id="settings-status" class="settings-status"></div>
         </div>
       </div>
 

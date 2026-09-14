@@ -202,6 +202,7 @@ async function loadSettings() {
     document.getElementById('setting-model').value = state.settings.model || 'gpt-4o-mini';
     document.getElementById('setting-permission').value = state.settings.permission_mode || 'standard';
     document.getElementById('setting-provider').value = state.settings.provider || 'openai';
+    document.getElementById('setting-api-key').value = state.settings.api_key || '';
   } catch {
     // Use defaults
   }
@@ -212,12 +213,22 @@ async function saveSettings() {
     model: document.getElementById('setting-model').value,
     permission_mode: document.getElementById('setting-permission').value,
     provider: document.getElementById('setting-provider').value,
+    api_key: document.getElementById('setting-api-key').value,
   };
   try {
     await api.updateSettings(settings);
     state.settings = settings;
+    const statusEl = document.getElementById('settings-status');
+    if (statusEl) {
+      statusEl.textContent = 'Settings saved!';
+      statusEl.className = 'settings-status success';
+    }
   } catch (err) {
-    console.error('Failed to save settings:', err);
+    const statusEl = document.getElementById('settings-status');
+    if (statusEl) {
+      statusEl.textContent = 'Failed to save settings';
+      statusEl.className = 'settings-status error';
+    }
   }
 }
 

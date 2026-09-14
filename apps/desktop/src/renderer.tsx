@@ -130,6 +130,8 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [serverStatus, setServerStatus] = useState<"running" | "stopped" | "error">("checking");
   const [streaming, setStreaming] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState({ model: "gpt-4o-mini", provider: "openai", api_key: "", permission_mode: "standard" });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Connect to backend
@@ -157,6 +159,14 @@ export default function App() {
       }
     };
     loadSessions();
+
+    // Load settings
+    try {
+      const data = await apiCall<{ model: string; provider: string; permission_mode: string }>("settings.get");
+      setSettings(prev => ({ ...prev, model: data.model, provider: data.provider, permission_mode: data.permission_mode }));
+    } catch {
+      // Ignore
+    }
 
     // Load tasks
     const loadTasks = async () => {
@@ -245,6 +255,16 @@ export default function App() {
     }
   };
 
+  // Save settings
+  const handleSaveSettings = async () => {
+    try {
+      await apiCall("settings.update", [settings]);
+      setShowSettings(false);
+    } catch {
+      // Ignore
+    }
+  };
+
   // Load session
   const handleLoadSession = async (sessionId: string) => {
     try {
@@ -261,10 +281,39 @@ export default function App() {
       <div className="header">
         <h1>X-Copilot</h1>
         <div className="header-actions">
+          <button onClick={() => setShowSettings(true)}>Settings</button>
           <button onClick={handleNewSession}>New Session</button>
           <span className={`status-dot ${serverStatus}`}>{serverStatus}</span>
         </div>
       </div>
+
+      {showSettings && (
+        <div className="settings-panel">
+          <h3>Settings</h3>
+          <div className="settings-field">
+            <label>Model</label>
+            <input value={settings.model} onChange={e => setSettings({...settings, model: e.target.value})} />
+          </div>
+          <div className="settings-field">
+            <label>Provider</label>
+            <select value={settings.provider} onChange={e => setSettings({...settings, provider: e.target.value})}>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="ollama">Ollama</option>
+              <option value="lmstudio">LM Studio</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
+          </div>
+          <div className="settings-field">
+            <label>API Key</label>
+            <input type="password" value={settings.api_key} onChange={e => setSettings({...settings, api_key: e.target.value})} placeholder="Enter API key..." />
+          </div>
+          <div className="settings-actions">
+            <button onClick={handleSaveSettings}>Save</button>
+            <button onClick={() => setShowSettings(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       <div className="main">
         <SessionList sessions={sessions} activeId={activeSession} onSelect={handleLoadSession} />
